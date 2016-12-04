@@ -13,13 +13,22 @@
 			http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd">
 
 	<int-jdbc:inbound-channel-adapter id="dataChannel"
-		query="select * from articles where author='Joe' and sent = 0" 
+		query="select * from articles where author='Sam' and sent = 0" 
 		update="update articles set sent = 1 where id in (:id)"
 		data-source="dataSource" row-mapper="articleRowMapper">
 		<int:poller fixed-rate="100">
 			<int:transactional />
 		</int:poller>
 	</int-jdbc:inbound-channel-adapter>
+	
+	<int-jdbc:outbound-channel-adapter id="dataChannel" channel="dataChannel1"
+		query="select * from item where send = 1"
+		data-source="dataSource">
+		<int:poller fixed-rate="100">
+			<int:transactional />
+		</int:poller>
+	</int-jdbc:outbound-channel-adapter>
+	
 
 	<int:service-activator input-channel="dataChannel" ref="jdbcMessageHandler" />
 	
@@ -36,6 +45,10 @@
 	<int:channel id="dataChannel">
 		<int:queue />
 	</int:channel>
+	
+	<int:channel id="dataChannel1">
+	<int:queue />
+	</int:channel>
 
 	<jdbc:initialize-database data-source="dataSource"
 		enabled="true">
@@ -48,7 +61,7 @@
 		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
 		<property name="url" value="jdbc:mysql://localhost/test" />
 		<property name="username" value="root" />
-		<property name="password" value="mnrpass" />
+		<property name="password" value="zm19871221" />
 	</bean>
 
 	<bean id="articleRowMapper"
