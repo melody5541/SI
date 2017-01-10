@@ -13,21 +13,17 @@
 			http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd">
 
 	<int-jdbc:inbound-channel-adapter id="dataChannel"
-		query="select * from articles where author='Sam' and sent = 0" 
-		update="update articles set sent = 1 where id in (:id)"
+		query="select * from articles where sent = 0" 
 		data-source="dataSource" row-mapper="articleRowMapper">
-		<int:poller fixed-rate="100">
+		<int:poller fixed-rate="5000">
 			<int:transactional />
 		</int:poller>
 	</int-jdbc:inbound-channel-adapter>
 	
-	<int-jdbc:outbound-channel-adapter id="dataChannel" channel="dataChannel1"
-		query="select * from item where send = 1"
-		data-source="dataSource">
-		<int:poller fixed-rate="100">
-			<int:transactional />
-		</int:poller>
-	</int-jdbc:outbound-channel-adapter>
+	<int-jdbc:outbound-channel-adapter
+         query= "insert into articles(id, name, category, tags, author, sent) values (8, 'e', 'spring', 'spring,integration', 'Joe', 0)"
+         data-source= "dataSource" channel= "insertChannel">
+    </int-jdbc:outbound-channel-adapter> 
 	
 
 	<int:service-activator input-channel="dataChannel" ref="jdbcMessageHandler" />
@@ -40,16 +36,15 @@
 		<property name="dataSource" ref="dataSource" />
 	</bean>
 
-	<int:poller default="true" fixed-rate="100" />
+	<int:poller default="true" fixed-rate="1000" />
 
 	<int:channel id="dataChannel">
 		<int:queue />
 	</int:channel>
 	
-	<int:channel id="dataChannel1">
-	<int:queue />
+	<int:channel id="insertChannel">
 	</int:channel>
-
+	
 	<jdbc:initialize-database data-source="dataSource"
 		enabled="true">
 		<jdbc:script location="classpath:db-schema.sql" />
