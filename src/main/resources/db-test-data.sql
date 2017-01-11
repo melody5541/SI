@@ -1,3 +1,1 @@
-insert into articles(id, name, category, tags, author, sent) values (1, "SpringIntegration Example", "spring", "spring,integration", "Joe", 0);
-insert into articles(id, name, category, tags, author, sent) values (2, "NamedParameterJdbcTemplate Example", "spring", "spring,jdbcTemplate", "Sam", 0);
-insert into articles(id, name, category, tags, author, sent) values (3, "MVC Example", "spring", "spring", "Joe", 0);
+insert into COMMON_MESSAGE(MESSAGE_NAME, MESSAGE_CONTENT, MESSAGE_STATUS, MESSAGE_CREATE_DATE_TIME) values ("SpringIntegration Example", "spring", "N", NOW());

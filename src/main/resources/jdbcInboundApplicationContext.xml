@@ -11,40 +11,7 @@
 			http://www.springframework.org/schema/integration/jdbc/spring-integration-jdbc.xsd
 			http://www.springframework.org/schema/jdbc
 			http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd">
-
-	<int-jdbc:inbound-channel-adapter id="dataChannel"
-		query="select * from articles where sent = 0" 
-		data-source="dataSource" row-mapper="articleRowMapper">
-		<int:poller fixed-rate="5000">
-			<int:transactional />
-		</int:poller>
-	</int-jdbc:inbound-channel-adapter>
-	
-	<int-jdbc:outbound-channel-adapter
-         query= "insert into articles(id, name, category, tags, author, sent) values (8, 'e', 'spring', 'spring,integration', 'Joe', 0)"
-         data-source= "dataSource" channel= "insertChannel">
-    </int-jdbc:outbound-channel-adapter> 
-	
-
-	<int:service-activator input-channel="dataChannel" ref="jdbcMessageHandler" />
-	
-	<bean id="jdbcMessageHandler"
-		class="com.javarticles.spring.integration.jdbc.JdbcMessageHandler" />
-
-	<bean id="transactionManager"
-		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
-		<property name="dataSource" ref="dataSource" />
-	</bean>
-
-	<int:poller default="true" fixed-rate="1000" />
-
-	<int:channel id="dataChannel">
-		<int:queue />
-	</int:channel>
-	
-	<int:channel id="insertChannel">
-	</int:channel>
-	
+	<!-- initilization datasource -->		
 	<jdbc:initialize-database data-source="dataSource"
 		enabled="true">
 		<jdbc:script location="classpath:db-schema.sql" />
@@ -58,7 +25,81 @@
 		<property name="username" value="root" />
 		<property name="password" value="zm19871221" />
 	</bean>
+	
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<!-- initilization datasource -->
+	
+	<int:poller default="true" fixed-rate="1000" />
 
-	<bean id="articleRowMapper"
-		class="com.javarticles.spring.integration.jdbc.ArticleRowMapper" />
+	<int:channel id="msgQueryOutputChannel">
+		<int:queue />
+	</int:channel>
+	
+	<int:channel id="msgInsertInputChannel">
+	</int:channel>
+	<int:channel id="msgInsertOutputChannel">
+	</int:channel>
+	
+	<!-- Msghandler to handle the msg  -->
+	<int:service-activator input-channel="msgQueryOutputChannel" ref="jdbcMessageHandler" />
+	
+	<bean id="jdbcMessageHandler"
+		class="com.hsbc.srbp.commonMsg.domain.JdbcMessageHandler" />
+	
+	
+	<bean id="commonMsgRowMapper"
+		class="com.hsbc.srbp.commonMsg.domain.CommonMsgRowMapper" />
+			
+	<int:gateway id="commonMsgService" service-interface="com.hsbc.srbp.commonMsg.service.CommonMsgService">
+    	<int:method name="createCommonMsg" 
+    				request-channel="msgInsertInputChannel"
+    				request-timeout="5000"
+    				reply-channel="msgInsertOutputChannel"
+    				reply-timeout="5000"/>
+    </int:gateway>
+    <!-- find  msg-->
+    <!-- <int-jdbc:inbound-channel-adapter id="msgQueryOutputChannel"
+		query="select * from COMMON_MESSAGE where MESSAGE_STATUS = 'N'" 
+		data-source="dataSource" row-mapper="commonMsgRowMapper">
+		<int:poller fixed-rate="5000">
+			<int:transactional />
+		</int:poller>
+	</int-jdbc:inbound-channel-adapter> -->
+     <!-- insert  msg-->
+    <int-jdbc:outbound-gateway data-source="dataSource" 
+								request-channel="msgInsertInputChannel"
+								reply-channel="msgInsertOutputChannel"
+								update="insert into COMMON_MESSAGE(MESSAGE_NAME, MESSAGE_CONTENT, MESSAGE_STATUS, MESSAGE_CREATE_DATE_TIME) values ( :payload.msg_name, :payload.msg_content, :payload.msg_status, NOW())"
+								query="select * from COMMON_MESSAGE order by MESSAGE_CREATE_DATE_TIME desc"		
+								request-sql-parameter-source-factory="requestSource"
+								row-mapper="commonMsgRowMapper"
+								keys-generated="true">
+								</int-jdbc:outbound-gateway>
+								
+	
+	<bean id="requestSource" class="org.springframework.integration.jdbc.ExpressionEvaluatingSqlParameterSourceFactory">
+		<property name="parameterExpressions">
+			<map>
+				<entry key="message_name" value="payload.msg_name"/>
+				<entry key="message_content" value="payload.msg_content"/>
+				<entry key="message_status" value="payload.msg_status"/>
+			</map>
+		</property>
+	</bean>	
+
+	
+	
+	
+	<!-- <int-jdbc:outbound-channel-adapter
+         query= "insert into articles(id, name, category, tags, author, sent) values (8, 'e', 'spring', 'spring,integration', 'Joe', 0)"
+         data-source= "dataSource" channel= "msgInsertInputChannel">
+    </int-jdbc:outbound-channel-adapter>  -->
+	
+
+	
+	
+	
 </beans>
