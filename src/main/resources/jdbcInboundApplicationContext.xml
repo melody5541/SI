@@ -89,17 +89,5 @@
 			</map>
 		</property>
 	</bean>	
-
-	
-	
-	
-	<!-- <int-jdbc:outbound-channel-adapter
-         query= "insert into articles(id, name, category, tags, author, sent) values (8, 'e', 'spring', 'spring,integration', 'Joe', 0)"
-         data-source= "dataSource" channel= "msgInsertInputChannel">
-    </int-jdbc:outbound-channel-adapter>  -->
-	
-
-	
-	
 	
 </beans>

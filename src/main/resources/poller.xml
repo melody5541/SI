@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:int-jdbc="http://www.springframework.org/schema/integration/jdbc"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+			http://www.springframework.org/schema/beans/spring-beans.xsd
+			http://www.springframework.org/schema/task
+			http://www.springframework.org/schema/task/spring-task.xsd
+			http://www.springframework.org/schema/integration
+			http://www.springframework.org/schema/integration/spring-integration.xsd
+			http://www.springframework.org/schema/integration/jdbc
+			http://www.springframework.org/schema/integration/jdbc/spring-integration-jdbc.xsd
+			http://www.springframework.org/schema/jdbc
+			http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd">
+	<import resource="classpath:jdbc-mysql.xml" />
+
+	<int:channel id="msgQueryOutputChannel">
+		<int:queue />
+	</int:channel>
+	<int:channel id="msgInsertInputChannel">
+	</int:channel>
+	<int:channel id="msgInsertOutputChannel">
+	</int:channel>
+
+	<!-- Msg handler to handle the msg -->
+	<int:service-activator input-channel="msgQueryOutputChannel"
+		ref="jdbcMessageHandler" />
+
+	<bean id="jdbcMessageHandler" class="com.hsbc.srbp.commonMsg.domain.JdbcMessageHandler" />
+
+	<bean id="commonMsgRowMapper" class="com.hsbc.srbp.commonMsg.domain.CommonMsgRowMapper" />
+
+	<int:gateway id="commonMsgService"
+		service-interface="com.hsbc.srbp.commonMsg.service.CommonMsgService">
+		<int:method name="createCommonMsg" request-channel="msgInsertInputChannel"
+			request-timeout="5000" reply-channel="msgInsertOutputChannel"
+			reply-timeout="5000" />
+	</int:gateway>
+	<!-- find msg -->
+	<int-jdbc:inbound-channel-adapter id="msgQueryOutputChannel"
+		query="select * from COMMON_MESSAGE where MESSAGE_STATUS = 'N'"
+		data-source="dataSource" row-mapper="commonMsgRowMapper">
+		<int:poller fixed-rate="1000" max-messages-per-poll="25" task-executor="poor">
+			<int:transactional transaction-manager="transactionManager"
+				isolation="DEFAULT" propagation="REQUIRED" read-only="true" timeout="1000" />
+		</int:poller>
+	</int-jdbc:inbound-channel-adapter>
+
+	<int:poller default="true" fixed-rate="1000" />
+	
+	<task:executor id="poor" keep-alive="120" queue-capacity="20" pool-size="5-25"/>
+	
+	<!-- insert msg -->
+	<int-jdbc:outbound-gateway data-source="dataSource"
+		request-channel="msgInsertInputChannel" reply-channel="msgInsertOutputChannel"
+		update="insert into common_message(message_name, message_content, message_status, message_create_date_time) values ( :payload.msg_name, :payload.msg_content, 'N', now())"
+		query="select * from common_message order by message_create_date_time desc"
+		request-sql-parameter-source-factory="requestSource" row-mapper="commonMsgRowMapper"
+		keys-generated="true">
+	</int-jdbc:outbound-gateway>
+
+
+	<bean id="requestSource"
+		class="org.springframework.integration.jdbc.ExpressionEvaluatingSqlParameterSourceFactory">
+		<property name="parameterExpressions">
+			<map>
+				<entry key="message_name" value="payload.msg_name" />
+				<entry key="message_content" value="payload.msg_content" />
+				<entry key="message_status" value="payload.msg_status" />
+			</map>
+		</property>
+	</bean>
+
+</beans>

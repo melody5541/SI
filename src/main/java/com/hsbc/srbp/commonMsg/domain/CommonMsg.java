@@ -1,10 +1,12 @@
 package com.hsbc.srbp.commonMsg.domain;
 
+import java.sql.Timestamp;
+
 public class CommonMsg {
     private int msg_id;
     private String msg_name;
     private String msg_content;
-    private String msg_createdatetime;
+    private Timestamp msg_createdatetime;
     private String msg_status;
 
 
@@ -34,12 +36,12 @@ public class CommonMsg {
 	}
 
 	
-	public String getMsg_createdatetime() {
+	public Timestamp getMsg_createdatetime() {
 		return msg_createdatetime;
 	}
 
 
-	public void setMsg_createdatetime(String msg_createdatetime) {
+	public void setMsg_createdatetime(Timestamp msg_createdatetime) {
 		this.msg_createdatetime = msg_createdatetime;
 	}
 
