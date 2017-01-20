@@ -2,47 +2,36 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:int="http://www.springframework.org/schema/integration"
 	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:int-jdbc="http://www.springframework.org/schema/integration/jdbc"
-	xmlns:context="http://www.springframework.org/schema/context" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context" 
+	xmlns:p="http://www.springframework.org/schema/p"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
 			http://www.springframework.org/schema/beans/spring-beans.xsd
 			http://www.springframework.org/schema/integration
-			http://www.springframework.org/schema/integration/spring-integration.xsd
+			http://www.springframework.org/schema/integration/spring-integration-4.3.xsd
 			http://www.springframework.org/schema/integration/jdbc
 			http://www.springframework.org/schema/integration/jdbc/spring-integration-jdbc.xsd
 			http://www.springframework.org/schema/jdbc
 			http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd">
-	<!-- initilization datasource -->		
-	<jdbc:initialize-database data-source="dataSource"
-		enabled="true">
-		<jdbc:script location="classpath:db-schema.sql" />
-		<jdbc:script location="classpath:db-test-data.sql" />
-	</jdbc:initialize-database>
-
-	<bean id="dataSource"
-		class="org.springframework.jdbc.datasource.DriverManagerDataSource">
-		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
-		<property name="url" value="jdbc:mysql://localhost/test" />
-		<property name="username" value="root" />
-		<property name="password" value="zm19871221" />
-	</bean>
+			
+	<import resource="classpath:jdbc-mysql.xml" />
 	
-	<bean id="transactionManager"
-		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
-		<property name="dataSource" ref="dataSource" />
-	</bean>
-	<!-- initilization datasource -->
-	
-	<int:poller default="true" fixed-rate="1000" />
-
 	<int:channel id="msgQueryOutputChannel">
 		<int:queue />
 	</int:channel>
 	
-	<int:channel id="msgInsertInputChannel">
-	</int:channel>
-	<int:channel id="msgInsertOutputChannel">
-	</int:channel>
-	
+    <!-- find  msg-->
+    <int-jdbc:inbound-channel-adapter id="msgQueryOutputChannel"
+		query="select * from COMMON_MESSAGE where MESSAGE_STATUS = 'N'" 
+		update="update COMMON_MESSAGE set message_status='S' where message_id in(:message_id)"
+		data-source="dataSource" row-mapper="commonMsgRowMapper" max-rows-per-poll="1">
+		<int:poller fixed-rate="1000">
+			<int:transactional transaction-manager="transactionManager"
+				isolation="DEFAULT" propagation="REQUIRED" read-only="false" timeout="1000" />
+		</int:poller>
+	</int-jdbc:inbound-channel-adapter> 
+     
+     <int:poller default="true" fixed-rate="1000" />
+     
 	<!-- Msghandler to handle the msg  -->
 	<int:service-activator input-channel="msgQueryOutputChannel" ref="jdbcMessageHandler" />
 	
@@ -51,43 +40,6 @@
 	
 	
 	<bean id="commonMsgRowMapper"
-		class="com.hsbc.srbp.commonMsg.domain.CommonMsgRowMapper" />
+		class="com.hsbc.srbp.commonMsg.domain.CommonMessageRowMapper" />
 			
-	<int:gateway id="commonMsgService" service-interface="com.hsbc.srbp.commonMsg.service.CommonMsgService">
-    	<int:method name="createCommonMsg" 
-    				request-channel="msgInsertInputChannel"
-    				request-timeout="5000"
-    				reply-channel="msgInsertOutputChannel"
-    				reply-timeout="5000"/>
-    </int:gateway>
-    <!-- find  msg-->
-    <!-- <int-jdbc:inbound-channel-adapter id="msgQueryOutputChannel"
-		query="select * from COMMON_MESSAGE where MESSAGE_STATUS = 'N'" 
-		data-source="dataSource" row-mapper="commonMsgRowMapper">
-		<int:poller fixed-rate="5000">
-			<int:transactional />
-		</int:poller>
-	</int-jdbc:inbound-channel-adapter> -->
-     <!-- insert  msg-->
-    <int-jdbc:outbound-gateway data-source="dataSource" 
-								request-channel="msgInsertInputChannel"
-								reply-channel="msgInsertOutputChannel"
-								update="insert into COMMON_MESSAGE(MESSAGE_NAME, MESSAGE_CONTENT, MESSAGE_STATUS, MESSAGE_CREATE_DATE_TIME) values ( :payload.msg_name, :payload.msg_content, :payload.msg_status, NOW())"
-								query="select * from COMMON_MESSAGE order by MESSAGE_CREATE_DATE_TIME desc"		
-								request-sql-parameter-source-factory="requestSource"
-								row-mapper="commonMsgRowMapper"
-								keys-generated="true">
-								</int-jdbc:outbound-gateway>
-								
-	
-	<bean id="requestSource" class="org.springframework.integration.jdbc.ExpressionEvaluatingSqlParameterSourceFactory">
-		<property name="parameterExpressions">
-			<map>
-				<entry key="message_name" value="payload.msg_name"/>
-				<entry key="message_content" value="payload.msg_content"/>
-				<entry key="message_status" value="payload.msg_status"/>
-			</map>
-		</property>
-	</bean>	
-	
 </beans>
