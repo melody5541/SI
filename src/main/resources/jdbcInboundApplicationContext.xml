@@ -22,7 +22,7 @@
     <!-- find  msg-->
     <int-jdbc:inbound-channel-adapter id="msgQueryOutputChannel"
 		query="select * from COMMON_MESSAGE where MESSAGE_STATUS = 'N'" 
-		update="update COMMON_MESSAGE set message_status='S' where message_id in(:message_id)"
+		update="update COMMON_MESSAGE set message_status='S' where message_id in (:message_id)"
 		data-source="dataSource" row-mapper="commonMsgRowMapper" max-rows-per-poll="1">
 		<int:poller fixed-rate="1000">
 			<int:transactional transaction-manager="transactionManager"
@@ -32,8 +32,8 @@
      
      <int:poller default="true" fixed-rate="1000" />
      
-	<!-- Msghandler to handle the msg  -->
-	<int:service-activator input-channel="msgQueryOutputChannel" ref="jdbcMessageHandler" />
+	<!-- handle the msg  -->
+	<int:service-activator input-channel="msgQueryOutputChannel" ref="jdbcMessageHandler"/>
 	
 	<bean id="jdbcMessageHandler"
 		class="com.hsbc.srbp.commonMsg.domain.JdbcMessageHandler" />
