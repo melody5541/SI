@@ -12,6 +12,7 @@ public class CommonMessageRowMapper implements RowMapper<CommonMessage> {
         String message_name = rs.getString("message_name");
         String message_status = rs.getString("message_status");
         String message_content = rs.getString("message_content");
+        Timestamp message_updatedatetime = rs.getTimestamp("message_update_date_time");
         Timestamp message_createdatetime = rs.getTimestamp("message_create_date_time");
         int message_id = rs.getInt("message_id");
         CommonMessage commonMessage = new CommonMessage();
@@ -20,6 +21,7 @@ public class CommonMessageRowMapper implements RowMapper<CommonMessage> {
         commonMessage.setMessage_createdatetime(message_createdatetime);
         commonMessage.setMessage_name(message_name);
         commonMessage.setMessage_status(message_status);
+        commonMessage.setMessage_updatedatetime(message_updatedatetime);
         return commonMessage;
     }
 

@@ -7,11 +7,11 @@
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
 			http://www.springframework.org/schema/beans/spring-beans.xsd
 			http://www.springframework.org/schema/integration
-			http://www.springframework.org/schema/integration/spring-integration-4.3.xsd
+			http://www.springframework.org/schema/integration/spring-integration.xsd
 			http://www.springframework.org/schema/integration/jdbc
 			http://www.springframework.org/schema/integration/jdbc/spring-integration-jdbc.xsd
 			http://www.springframework.org/schema/jdbc
-			http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd">
+			http://www.springframework.org/schema/jdbc/spring-jdbc.xsd">
 			
 	<import resource="classpath:jdbc-mysql.xml" />
 	
@@ -21,12 +21,13 @@
 	
     <!-- find  msg-->
     <int-jdbc:inbound-channel-adapter id="msgQueryOutputChannel"
-		query="select * from COMMON_MESSAGE where MESSAGE_STATUS = 'N'" 
-		update="update COMMON_MESSAGE set message_status='S' where message_id in (:message_id)"
+		query="select * from common_message where message_status = 'N'" 
+		update="update common_message set message_status='S', message_update_date_time 
+		= now() where message_id in (:message_id)"
 		data-source="dataSource" row-mapper="commonMsgRowMapper" max-rows-per-poll="1">
-		<int:poller fixed-rate="1000">
+		<int:poller fixed-rate="20000" max-messages-per-poll="1">
 			<int:transactional transaction-manager="transactionManager"
-				isolation="DEFAULT" propagation="REQUIRED" read-only="false" timeout="1000" />
+				isolation="DEFAULT" propagation="REQUIRED" read-only="false" timeout="10000" />
 		</int:poller>
 	</int-jdbc:inbound-channel-adapter> 
      

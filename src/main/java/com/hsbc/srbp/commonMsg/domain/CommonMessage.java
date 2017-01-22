@@ -1,14 +1,24 @@
 package com.hsbc.srbp.commonMsg.domain;
 
+import java.io.Serializable;
 import java.sql.Timestamp;
 
-public class CommonMessage {
+public class CommonMessage implements Serializable{
     private int message_id;
     private String message_name;
     private String message_content;
     private Timestamp message_createdatetime;
+    private Timestamp message_updatedatetime;
     private String message_status;
 
+
+	public Timestamp getMessage_updatedatetime() {
+		return message_updatedatetime;
+	}
+
+	public void setMessage_updatedatetime(Timestamp message_updatedatetime) {
+		this.message_updatedatetime = message_updatedatetime;
+	}
 
 	public int getMessage_id() {
 		return message_id;
@@ -64,6 +74,7 @@ public class CommonMessage {
         StringBuilder sb = new StringBuilder("message_id: ");
         sb.append(message_id).append(", message_name: ").append(message_name).append(", message_content: ")
                 .append(message_content).append(", message_createdatetime: ").append(message_createdatetime)
+                .append(", message_updatedatetime: ").append(message_updatedatetime)
                 .append(", message_status:").append(message_status);
         return sb.toString();
     }
