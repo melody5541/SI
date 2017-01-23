@@ -13,29 +13,18 @@ public class JdbcMessageHandler{
 
 	private AtomicInteger counter = new AtomicInteger();
 
-	public void handleMessage(Message<?> message) throws Exception {
+	public void handleMessage(Message<?> message) throws InterruptedException {
+		logger.info("#####start handleMessage#######");
 		int count = counter.incrementAndGet();
 		List<CommonMessage> list = (List<CommonMessage>) message.getPayload();
 		for (CommonMessage msg : list) {
 			if(msg.getMessage_name().equals("name1")){
 				logger.info("Current Thread:" + Thread.currentThread().getName() + " simulater throws exception and sleeping with "+count+" poll");
-				Thread.sleep(10000);
-				throw new RuntimeException("simulater throws exception");
+				Thread.sleep(100000);
+//				throw new RuntimeException("simulater throws exception");
 			}
 			logger.info(Thread.currentThread().getName() + " handle message #" + msg.getMessage_id() + ": " + msg);
 		}
 	}
 	
-//	public void handleMessage(Message<?> message) throws Exception {
-//			int count = counter.incrementAndGet();
-//			List<CommonMessage> list = (List<CommonMessage>) message.getPayload();
-//			for (CommonMessage msg : list) {
-//				if(msg.getMessage_name().equals("name1")){
-//					logger.info("Current Thread:" + Thread.currentThread().getName() + " simulater throws exception and sleeping with "+count+" poll");
-//					Thread.sleep(10000);
-//					throw new Exception("simulater throws exception");
-//				}
-//				logger.info(Thread.currentThread().getName() + " handle message #" + msg.getMessage_id() + ": " + msg);
-//			}
-//	}
 }

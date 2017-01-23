@@ -2,7 +2,7 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:int="http://www.springframework.org/schema/integration"
 	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:int-jdbc="http://www.springframework.org/schema/integration/jdbc"
-	xmlns:context="http://www.springframework.org/schema/context" 
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:task="http://www.springframework.org/schema/task" 
 	xmlns:p="http://www.springframework.org/schema/p"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
 			http://www.springframework.org/schema/beans/spring-beans.xsd
@@ -11,7 +11,9 @@
 			http://www.springframework.org/schema/integration/jdbc
 			http://www.springframework.org/schema/integration/jdbc/spring-integration-jdbc.xsd
 			http://www.springframework.org/schema/jdbc
-			http://www.springframework.org/schema/jdbc/spring-jdbc.xsd">
+			http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+			http://www.springframework.org/schema/task
+			http://www.springframework.org/schema/task/spring-task.xsd">
 			
 	<import resource="classpath:jdbc-mysql.xml" />
 	
@@ -19,22 +21,34 @@
 		<int:queue />
 	</int:channel>
 	
+	<int:publish-subscribe-channel id="pub">
+	</int:publish-subscribe-channel>
+	
+	<int:bridge input-channel="msgQueryOutputChannel" output-channel="pub"></int:bridge>
+	
+	<bean class="org.springframework.beans.factory.config.CustomScopeConfigurer">
+	    <property name="scopes">
+	        <map>
+	            <entry key="thread" value="org.springframework.context.support.SimpleThreadScope" />
+	        </map>
+	    </property>
+	</bean>
+	
     <!-- find  msg-->
-    <int-jdbc:inbound-channel-adapter id="msgQueryOutputChannel"
+    <int-jdbc:inbound-channel-adapter channel="msgQueryOutputChannel"
 		query="select * from common_message where message_status = 'N'" 
 		update="update common_message set message_status='S', message_update_date_time 
 		= now() where message_id in (:message_id)"
 		data-source="dataSource" row-mapper="commonMsgRowMapper" max-rows-per-poll="1">
-		<int:poller fixed-rate="20000" max-messages-per-poll="1">
+		<int:poller fixed-rate="5000" max-messages-per-poll="1">
 			<int:transactional transaction-manager="transactionManager"
 				isolation="DEFAULT" propagation="REQUIRED" read-only="false" timeout="10000" />
 		</int:poller>
 	</int-jdbc:inbound-channel-adapter> 
      
      <int:poller default="true" fixed-rate="1000" />
-     
 	<!-- handle the msg  -->
-	<int:service-activator input-channel="msgQueryOutputChannel" ref="jdbcMessageHandler"/>
+	<int:service-activator input-channel="pub" ref="jdbcMessageHandler"/>
 	
 	<bean id="jdbcMessageHandler"
 		class="com.hsbc.srbp.commonMsg.domain.JdbcMessageHandler" />
