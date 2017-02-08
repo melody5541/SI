@@ -17,7 +17,7 @@ public class SiJdbcInboundPoller {
 	 */
 	public static void main(final String... args) {
 
-		final AbstractApplicationContext context = new ClassPathXmlApplicationContext("jdbcMessageStoreApplicationContext.xml");
+		final AbstractApplicationContext context = new ClassPathXmlApplicationContext("jdbcInboundApplicationContext.xml");
 
 	}
 }

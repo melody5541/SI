@@ -3,7 +3,7 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:int="http://www.springframework.org/schema/integration"
 	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:int-jdbc="http://www.springframework.org/schema/integration/jdbc"
 	xmlns:context="http://www.springframework.org/schema/context" xmlns:task="http://www.springframework.org/schema/task" 
-	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:tx="http://www.springframework.org/schema/tx"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
 			http://www.springframework.org/schema/beans/spring-beans.xsd
 			http://www.springframework.org/schema/integration
@@ -12,49 +12,58 @@
 			http://www.springframework.org/schema/integration/jdbc/spring-integration-jdbc.xsd
 			http://www.springframework.org/schema/jdbc
 			http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+			http://www.springframework.org/schema/tx
+			http://www.springframework.org/schema/tx/spring-tx.xsd
 			http://www.springframework.org/schema/task
 			http://www.springframework.org/schema/task/spring-task.xsd">
 			
 	<import resource="classpath:jdbc-mysql.xml" />
 	
-	<int:channel id="msgQueryOutputChannel">
-		<int:queue />
-	</int:channel>
+	<task:annotation-driven executor="processer_executor"/>
 	
-	<int:publish-subscribe-channel id="pub">
-	</int:publish-subscribe-channel>
+	<tx:annotation-driven/>
 	
-	<int:bridge input-channel="msgQueryOutputChannel" output-channel="pub"></int:bridge>
+	<task:executor id="poller_executor" pool-size="20" rejection-policy="ABORT"/>
 	
-	<bean class="org.springframework.beans.factory.config.CustomScopeConfigurer">
-	    <property name="scopes">
-	        <map>
-	            <entry key="thread" value="org.springframework.context.support.SimpleThreadScope" />
-	        </map>
-	    </property>
-	</bean>
-	
+	<task:executor id="processer_executor" pool-size="2"  queue-capacity="0" rejection-policy="ABORT"/>
     <!-- find  msg-->
-    <int-jdbc:inbound-channel-adapter channel="msgQueryOutputChannel"
-		query="select * from common_message where message_status = 'N'" 
+    <int-jdbc:inbound-channel-adapter id="msgQueryInboundAdapter"
+		query="select * from common_message where message_status='N' limit 1 for update" 
 		update="update common_message set message_status='S', message_update_date_time 
 		= now() where message_id in (:message_id)"
 		data-source="dataSource" row-mapper="commonMsgRowMapper" max-rows-per-poll="1">
-		<int:poller fixed-rate="5000" max-messages-per-poll="1">
-			<int:transactional transaction-manager="transactionManager"
+		<int:poller fixed-rate="10000" max-messages-per-poll="1" task-executor="poller_executor">
+			<int:transactional transaction-manager="adapterTxnManager"
 				isolation="DEFAULT" propagation="REQUIRED" read-only="false" timeout="10000" />
 		</int:poller>
 	</int-jdbc:inbound-channel-adapter> 
      
-     <int:poller default="true" fixed-rate="1000" />
+    <int:poller default="true" fixed-rate="1000" />
+    
 	<!-- handle the msg  -->
-	<int:service-activator input-channel="pub" ref="jdbcMessageHandler"/>
+	<int:service-activator input-channel="msgQueryInboundAdapter" ref="messageHandler" />
 	
-	<bean id="jdbcMessageHandler"
-		class="com.hsbc.srbp.commonMsg.domain.JdbcMessageHandler" />
+	<bean id="messageHandler" class="com.hsbc.srbp.commonMsg.service.impl.MessageHandlerImpl" >
+		<property name="messageProcessService" ref="messageProcessService"></property>
+	</bean>
+		
+	<bean id="messageProcessService" class="com.hsbc.srbp.commonMsg.service.impl.MessageProcessServiceImpl"/>
+	
+	<bean id="commonMsgRowMapper" class="com.hsbc.srbp.commonMsg.domain.CommonMessageRowMapper" />
+		
+	<!-- <int:exception-type-router input-channel="errorChannel">
+		<int:mapping exception-type="org.springframework.core.task.TaskRejectedException"
+			channel="taskRejectedOutputExceptionChannel" />
+	</int:exception-type-router>
+	
+	<int:channel id="taskRejectedOutputExceptionChannel">
+		<int:queue/>
+	</int:channel>
+	
+	<int:service-activator input-channel="taskRejectedOutputExceptionChannel" ref="errorMessageHandler" />
+	
+	<bean id="errorMessageHandler" class="com.hsbc.srbp.commonMsg.service.impl.ErrorMessageHandlerImpl" /> -->
 	
 	
-	<bean id="commonMsgRowMapper"
-		class="com.hsbc.srbp.commonMsg.domain.CommonMessageRowMapper" />
 			
 </beans>

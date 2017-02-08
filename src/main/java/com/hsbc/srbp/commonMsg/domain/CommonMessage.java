@@ -1,9 +1,8 @@
 package com.hsbc.srbp.commonMsg.domain;
 
-import java.io.Serializable;
 import java.sql.Timestamp;
 
-public class CommonMessage implements Serializable{
+public class CommonMessage{
     private int message_id;
     private String message_name;
     private String message_content;
